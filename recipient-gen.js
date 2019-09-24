@@ -1,4 +1,5 @@
 var steem = require("steem")
+var javalon = require("javalon")
 var fs = require('fs')
 var logger = fs.createWriteStream('airdrop.csv', {
   flags: 'a' // 'a' means appending (old data will be preserved)
@@ -46,10 +47,13 @@ function getStuff(author, permlink) {
 function winPoints(author, amount) {
   if (amount <= 0) return
   if (isNaN(amount)) return
-  if (recipients[author])
-    recipients[author] += amount
-  else 
-    recipients[author] = amount
+  javalon.getAccount(author, (err, account) => {
+    if (!err) {
+      if (recipients[account.name]){ recipients[account.name] += amount }
+      else{ recipients[account.name] = amount }
+      console.log(account.name + "\t\t" + recipients[account.name] )
+    }
+  })
 }
 
 function fin() {
