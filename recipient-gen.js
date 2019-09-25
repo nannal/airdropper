@@ -9,6 +9,8 @@ const fields = ['author', 'permlink', 'created', 'children', 'total_payout_value
 const opts = { fields };
 const parser = new Parser(opts)
 
+var avalonUsers=[]
+
 query = {
   tag: process.env.TAG,
   limit: 100
@@ -22,38 +24,52 @@ function getStuff(author, permlink) {
   query.start_author = author
   query.start_permlink = permlink
   steem.api.getDiscussionsByCreated(query, function(err, result) {
-    console.log(result[0].created, Object.keys(recipients).length)
-    for(i=0; i<result.length;i++) {
-      var thune = parseInt(result[i].total_payout_value.replace(' SBD', ''))
-      thune += parseInt(result[i].curator_payout_value.replace(' SBD', ''))
-      thune += parseInt(result[i].pending_payout_value.replace(' SBD', ''))
-      winPoints(result[i].author, thune)
-      var total_rshares = 0
-      for (let y = 0; y < result[i].active_votes.length; y++) {
-        total_rshares += parseInt(result[i].active_votes[y].rshares)
+    try{
+      console.log(result[0].created, Object.keys(recipients).length)
+      for(i=0; i<result.length;i++) {
+        var thune = parseInt(result[i].total_payout_value.replace(' SBD', ''))
+        thune += parseInt(result[i].curator_payout_value.replace(' SBD', ''))
+        thune += parseInt(result[i].pending_payout_value.replace(' SBD', ''))
+        winPoints(result[i].author, thune)
+        var total_rshares = 0
+        for (let y = 0; y < result[i].active_votes.length; y++) {
+          total_rshares += parseInt(result[i].active_votes[y].rshares)
+        }
+        for (let y = 0; y < result[i].active_votes.length; y++) {
+          winPoints(result[i].active_votes[y].voter, thune*parseInt(result[i].active_votes[y].rshares)/total_rshares)
+        }
       }
-      for (let y = 0; y < result[i].active_votes.length; y++) {
-        winPoints(result[i].active_votes[y].voter, thune*parseInt(result[i].active_votes[y].rshares)/total_rshares)
-      }
+      if (result.length < 100 || new Date(result[0].created).getTime() < 1546300800000) {
+        fin()
+      } else {
+        getStuff(result[result.length-1].author, result[result.length-1].permlink)
     }
-    if (result.length < 100 || new Date(result[0].created).getTime() < 1546300800000) {
-      fin()
-    } else {
-      getStuff(result[result.length-1].author, result[result.length-1].permlink)
-    }
+  }
+  catch{err}(console.log(err))
   });
 }
 
 function winPoints(author, amount) {
   if (amount <= 0) return
   if (isNaN(amount)) return
-  javalon.getAccount(author, (err, account) => {
-    if (!err) {
-      if (recipients[account.name]){ recipients[account.name] += amount }
-      else{ recipients[account.name] = amount }
-      console.log(account.name + "\t\t" + recipients[account.name] )
-    }
-  })
+
+  if (avalonUsers.indexOf(author) != -1) {
+    if (recipients[author]){ recipients[author] += amount }
+    else{ recipients[author] = amount }
+  }
+  else{
+    javalon.getAccount(author, (err, account) => {
+      if (!err) {
+        if (avalonUsers.indexOf(author) == -1){
+          avalonUsers.push(author)
+          console.log("User Count: ",avalonUsers.length,"\tNew user:", author)
+        }
+        if (recipients[author]){ recipients[author] += amount }
+        else{ recipients[author] = amount }
+      }
+    })
+  }
+
 }
 
 function fin() {
