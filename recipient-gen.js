@@ -40,7 +40,7 @@ function getStuff(author, permlink) {
           winPoints(result[i].active_votes[y].voter, thune*parseInt(result[i].active_votes[y].rshares)/total_rshares)
         }
       }
-      if (result.length < 100 || new Date(result[0].created).getTime() < 1546300800000) {
+      if (result.length < 100) {
         fin()
       } else {
         getStuff(result[result.length-1].author, result[result.length-1].permlink)
