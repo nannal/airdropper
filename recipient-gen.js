@@ -1,5 +1,4 @@
 var steem = require("steem")
-var javalon = require("javalon")
 var fs = require('fs')
 var logger = fs.createWriteStream('airdrop.csv', {
   flags: 'a' // 'a' means appending (old data will be preserved)
@@ -10,21 +9,23 @@ const opts = { fields };
 const parser = new Parser(opts)
 
 var avalonUsers=[]
-
-query = {
+var recipients = {}
+const query = {
   tag: process.env.TAG,
   limit: 100
 }
 
-var recipients = {}
-
-getStuff()
+fs.readFile('avaloners26092019.csv', function(err, buf) {
+  avalonUsers = buf.toString().split('\n')
+  console.log(avalonUsers)
+  getStuff()
+});
 
 function getStuff(author, permlink) {
   query.start_author = author
   query.start_permlink = permlink
   steem.api.getDiscussionsByCreated(query, function(err, result) {
-    try{
+    try {
       console.log(result[0].created, Object.keys(recipients).length)
       for(i=0; i<result.length;i++) {
         var thune = parseInt(result[i].total_payout_value.replace(' SBD', ''))
@@ -43,9 +44,10 @@ function getStuff(author, permlink) {
         fin()
       } else {
         getStuff(result[result.length-1].author, result[result.length-1].permlink)
+      }
+    } catch(err) {
+      console.log(err)
     }
-  }
-  catch{err}(console.log(err))
   });
 }
 
@@ -54,22 +56,11 @@ function winPoints(author, amount) {
   if (isNaN(amount)) return
 
   if (avalonUsers.indexOf(author) != -1) {
-    if (recipients[author]){ recipients[author] += amount }
-    else{ recipients[author] = amount }
+    if (recipients[author])
+      recipients[author] += amount
+    else
+      recipients[author] = amount
   }
-  else{
-    javalon.getAccount(author, (err, account) => {
-      if (!err) {
-        if (avalonUsers.indexOf(author) == -1){
-          avalonUsers.push(author)
-          console.log("User Count: ",avalonUsers.length,"\tNew user:", author)
-        }
-        if (recipients[author]){ recipients[author] += amount }
-        else{ recipients[author] = amount }
-      }
-    })
-  }
-
 }
 
 function fin() {
