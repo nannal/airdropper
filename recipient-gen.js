@@ -17,7 +17,7 @@ const query = {
 
 fs.readFile('avaloners26092019.csv', function(err, buf) {
   avalonUsers = buf.toString().split('\n')
-  console.log(avalonUsers)
+  console.log('Loaded '+avalonUsers.length+' avalon users from file')
   getStuff()
 });
 
@@ -28,16 +28,16 @@ function getStuff(author, permlink) {
     try {
       console.log(result[0].created, Object.keys(recipients).length)
       for(i=0; i<result.length;i++) {
-        var thune = parseInt(result[i].total_payout_value.replace(' SBD', ''))
-        thune += parseInt(result[i].curator_payout_value.replace(' SBD', ''))
-        thune += parseInt(result[i].pending_payout_value.replace(' SBD', ''))
-        winPoints(result[i].author, thune)
+        var thune = parseFloat(result[i].total_payout_value.replace(' SBD', ''))
+        thune += parseFloat(result[i].curator_payout_value.replace(' SBD', ''))
+        thune += parseFloat(result[i].pending_payout_value.replace(' SBD', ''))
+        winPoints(result[i].author, thune, 'author')
         var total_rshares = 0
         for (let y = 0; y < result[i].active_votes.length; y++) {
           total_rshares += parseInt(result[i].active_votes[y].rshares)
         }
         for (let y = 0; y < result[i].active_votes.length; y++) {
-          winPoints(result[i].active_votes[y].voter, thune*parseInt(result[i].active_votes[y].rshares)/total_rshares)
+          winPoints(result[i].active_votes[y].voter, thune*parseInt(result[i].active_votes[y].rshares)/total_rshares, 'curation')
         }
       }
       if (result.length < 100) {
@@ -51,20 +51,31 @@ function getStuff(author, permlink) {
   });
 }
 
-function winPoints(author, amount) {
+function winPoints(author, amount, type) {
   if (amount <= 0) return
   if (isNaN(amount)) return
 
   if (avalonUsers.indexOf(author) != -1) {
-    if (recipients[author])
-      recipients[author] += amount
-    else
-      recipients[author] = amount
+    if (!recipients[author])
+      recipients[author] = {
+        curation: 0,
+        author: 0
+      }
+    //console.log(author+' '+type+' '+amount)
+    recipients[author][type] += amount
   }
 }
 
 function fin() {
   for (const name in recipients) {
-    logger.write(name+','+recipients[name]+'\n')
+    logger.write(name+','+recipients[name].curation+','+recipients[name].author+'\n')
   }
+  console.log('Wrote output file')
 }
+
+process.on('SIGINT', function() {
+  fin()
+  setTimeout(function() {
+    process.exit(0)
+  }, 1000)
+})
