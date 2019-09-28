@@ -46,6 +46,12 @@ function getStuff(author, permlink) {
         getStuff(result[result.length-1].author, result[result.length-1].permlink)
       }
     } catch(err) {
+      setTimeout(function() {
+        getStuff(
+          query.start_author,
+          query.start_permlink
+        )
+      }, 3000)
       console.log(err)
     }
   });
